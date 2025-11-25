@@ -1,48 +1,72 @@
-import os 
-import re 
-import sys 
-import requests 
+import os
+import re
+import sys
+import requests
+from datetime import datetime, timedelta, timezone
 
-cookie_list = os.getenv("COOKIE_QUARK").split('\n|&&')
+from tg import TG
+
+
+# cookie_list = os.getenv("COOKIE_QUARK").split('\n|&&')
 
 # 替代 notify 功能
 def send(title, message):
     print(f"{title}: {message}")
 
-# 获取环境变量 
-def get_env(): 
-    # 判断 COOKIE_QUARK是否存在于环境变量 
-    if "COOKIE_QUARK" in os.environ: 
-        # 读取系统变量以 \n 或 && 分割变量 
-        cookie_list = re.split('\n|&&', os.environ.get('COOKIE_QUARK')) 
-    else: 
-        # 标准日志输出 
-        print('❌未添加COOKIE_QUARK变量') 
-        send('夸克自动签到', '❌未添加COOKIE_QUARK变量') 
-        # 脚本退出 
-        sys.exit(0) 
 
-    return cookie_list 
+def tg_send(msg):
+    tg_chat_id, tg_bot_token = os.getenv("TG_CONFIG").split(';')
+    now_beijing = format_to_iso(datetime.now(timezone.utc) + timedelta(hours=8))
+
+    if tg_bot_token and tg_chat_id:
+        tg = TG(tg_bot_token, tg_chat_id)
+
+        msg = f"#quark 夸克自动签到\n{msg}\n时间：{now_beijing}"
+
+        tg.send_text(msg)
+
+
+def format_to_iso(date):
+    return date.strftime('%Y-%m-%d %H:%M:%S')
+
+
+# 获取环境变量
+def get_env():
+    # 判断 COOKIE_QUARK是否存在于环境变量 
+    if "COOKIE_QUARK" in os.environ:
+        # 读取系统变量以 \n 或 && 分割变量 
+        cookie_list = re.split('\n|&&', os.environ.get('COOKIE_QUARK'))
+    else:
+        # 标准日志输出 
+        print('❌未添加COOKIE_QUARK变量')
+        send('夸克自动签到', '❌未添加COOKIE_QUARK变量')
+        # 脚本退出 
+        sys.exit(0)
+
+    return cookie_list
+
 
 # 其他代码...
 
 class Quark:
-    '''
+    """
     Quark类封装了签到、领取签到奖励的方法
-    '''
+    """
+
     def __init__(self, user_data):
-        '''
+        """
         初始化方法
         :param user_data: 用户信息，用于后续的请求
-        '''
+        """
         self.param = user_data
 
-    def convert_bytes(self, b):
-        '''
+    @staticmethod
+    def convert_bytes(b):
+        """
         将字节转换为 MB GB TB
         :param b: 字节数
         :return: 返回 MB GB TB
-        '''
+        """
         units = ("B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
         i = 0
         while b >= 1024 and i < len(units) - 1:
@@ -51,10 +75,10 @@ class Quark:
         return f"{b:.2f} {units[i]}"
 
     def get_growth_info(self):
-        '''
+        """
         获取用户当前的签到信息
-        :return: 返回一个字典，包含用户当前的签到信息
-        '''
+        :return: 返回一部字典，包含用户当前的签到信息
+        """
         url = "https://drive-m.quark.cn/1/clouddrive/capacity/growth/info"
         querystring = {
             "pr": "ucpro",
@@ -64,17 +88,17 @@ class Quark:
             "vcode": self.param.get('vcode')
         }
         response = requests.get(url=url, params=querystring).json()
-        #print(response)
+        # print(response)
         if response.get("data"):
             return response["data"]
         else:
             return False
 
     def get_growth_sign(self):
-        '''
+        """
         获取用户当前的签到信息
-        :return: 返回一个字典，包含用户当前的签到信息
-        '''
+        :return: 返回一部字典，包含用户当前的签到信息
+        """
         url = "https://drive-m.quark.cn/1/clouddrive/capacity/growth/sign"
         querystring = {
             "pr": "ucpro",
@@ -85,16 +109,16 @@ class Quark:
         }
         data = {"sign_cyclic": True}
         response = requests.post(url=url, json=data, params=querystring).json()
-        #print(response)
+        # print(response)
         if response.get("data"):
             return True, response["data"]["sign_daily_reward"]
         else:
             return False, response["message"]
 
     def queryBalance(self):
-        '''
+        """
         查询抽奖余额
-        '''
+        """
         url = "https://coral2.quark.cn/currency/v1/queryBalance"
         querystring = {
             "moduleCode": "1f3563d38896438db994f118d4ff53cb",
@@ -108,10 +132,10 @@ class Quark:
             return response["msg"]
 
     def do_sign(self):
-        '''
+        """
         执行签到任务
         :return: 返回一个字符串，包含签到结果
-        '''
+        """
         log = ""
         # 每日领空间
         growth_info = self.get_growth_info()
@@ -140,18 +164,18 @@ class Quark:
                     log += f"❌ 签到异常: {sign_return}\n"
         else:
             # log += f"❌ 签到异常: 获取成长信息失败\n"
-            raise Exception("❌ 签到异常: 获取成长信息失败")  # 适用于单账号情形，当 cookie 值失效后直接报错，方便通过 github action 的操作系统来进行提醒 如果你使用的是多账号签到的话，不要跟进此更新
+            raise Exception(
+                "❌ 签到异常: 获取成长信息失败")  # 适用于单账号情形，当 cookie 值失效后直接报错，方便通过 github action 的操作系统来进行提醒 如果你使用的是多账号签到的话，不要跟进此更新
 
         return log
 
 
 def main():
-    '''
+    """
     主函数
     :return: 返回一个字符串，包含签到结果
-    '''
+    """
     msg = ""
-    global cookie_quark
     cookie_quark = get_env()
 
     print("✅ 检测到共", len(cookie_quark), "个夸克账号\n")
@@ -177,8 +201,10 @@ def main():
 
     try:
         send('夸克自动签到', msg)
+        tg_send(msg)
     except Exception as err:
         print('%s\n❌ 错误，请查看运行日志！' % err)
+        tg_send('%s\n❌ 错误，请查看运行日志！' % err)
 
     return msg[:-1]
 
