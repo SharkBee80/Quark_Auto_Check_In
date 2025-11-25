@@ -15,7 +15,7 @@ def send(title, message):
 
 
 def tg_send(msg):
-    tg_chat_id, tg_bot_token = os.getenv("TG_CONFIG").split(';')
+    tg_bot_token, tg_chat_id = os.getenv("TG_CONFIG").split(';')
     now_beijing = format_to_iso(datetime.now(timezone.utc) + timedelta(hours=8))
 
     if tg_bot_token and tg_chat_id:
