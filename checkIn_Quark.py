@@ -19,11 +19,15 @@ def tg_send(msg):
     now_beijing = format_to_iso(datetime.now(timezone.utc) + timedelta(hours=8))
 
     if tg_bot_token and tg_chat_id:
-        tg = TG(tg_bot_token, tg_chat_id)
+        tg_bot = TG(tg_bot_token, tg_chat_id)
 
-        msg = f"#quark 夸克自动签到\n{msg}\n时间：{now_beijing}"
+        msg = f"""
+#quark *夸克自动签到*
+{msg}
+📅 *时间*：{now_beijing}
+        """
 
-        tg.send_text(msg)
+        tg_bot.send_markdown(msg)
 
 
 def format_to_iso(date):
@@ -201,10 +205,11 @@ def main():
 
     try:
         send('夸克自动签到', msg)
-        tg_send(msg)
     except Exception as err:
         print('%s\n❌ 错误，请查看运行日志！' % err)
         tg_send('%s\n❌ 错误，请查看运行日志！' % err)
+    else:
+        tg_send(msg)
 
     return msg[:-1]
 

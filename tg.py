@@ -13,7 +13,11 @@ import time
 
 
 class TG:
-    def __init__(self, token, chat_id, retry=3, timeout=5):
+    def __init__(self, token, chat_id, retry=2, timeout=5):
+        # 检测是否为空
+        if not token or not chat_id:
+            raise ValueError("Token and chat_id cannot be empty")
+
         self.token = token
         self.chat_id = chat_id
         self.retry = retry
@@ -31,7 +35,7 @@ class TG:
                 if i == self.retry:
                     print(f"Telegram API 请求失败,{e}")
                     return {"ok": False, "error": str(e)}
-                print(f"Telegram API 请求失败，正在第 {i + 1} 次重试...")
+                print(f"{e}\nTelegram API 请求失败，正在第 {i + 1} 次重试...")
                 time.sleep(1)
         return None
 
@@ -63,3 +67,11 @@ class TG:
             data["caption"] = caption
         with open(file_path, "rb") as f:
             return self._post("sendDocument", data=data, files={"document": f})
+
+
+if __name__ == "__main__":
+    try:
+        tg_bot = TG(token="", chat_id="")
+        tg_bot.send_text("hello")
+    except Exception as e:
+        print(e)
