@@ -33,7 +33,7 @@ def format_to_iso(date):
 
 
 def main():
-    msg = "今日已完成签到"
+    msg = "✴️ 今日已完成签到"
     tg_send(msg)
 
 
