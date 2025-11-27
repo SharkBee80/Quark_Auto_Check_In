@@ -15,6 +15,8 @@ def send(title, message):
 
 
 def tg_send(msg):
+    if "TG_CONFIG" not in os.environ:
+        return
     tg_bot_token, tg_chat_id = os.getenv("TG_CONFIG").split(';')
     now_beijing = format_to_iso(datetime.now(timezone.utc) + timedelta(hours=8))
 
@@ -25,6 +27,7 @@ def tg_send(msg):
 #quark *夸克自动签到*
 
 {msg}
+
 📅 *时间*：{now_beijing}
         """
 
