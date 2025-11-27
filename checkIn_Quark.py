@@ -197,11 +197,13 @@ def main():
                 user_data.update({a[0:a.index('=')]: a[a.index('=') + 1:]})
         # print(user_data)
         # 开始任务
+        if i > 0:
+            msg += "\n"
         log = f"🙍🏻‍♂️ 第{i + 1}个账号"
         msg += log
         # 登录
         log = Quark(user_data).do_sign()
-        msg += log + "\n"
+        msg += log  # + "\n"
 
         i += 1
 
