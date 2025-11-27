@@ -114,6 +114,7 @@ jobs:
         run: python iskip.py
 
   final:
+    needs: [sign-in, already-signed]
     runs-on: ubuntu-latest
     steps:
       - name: 清理旧的工作流记录
