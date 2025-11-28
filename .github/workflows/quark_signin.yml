@@ -114,7 +114,8 @@ jobs:
         run: python iskip.py
 
   final:
-    needs: check-if-already-signed
+    needs: [sign-in, already-signed]
+    if: always()
     runs-on: ubuntu-latest
     steps:
       - name: 清理旧的工作流记录
