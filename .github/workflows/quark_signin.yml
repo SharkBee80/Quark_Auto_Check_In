@@ -11,35 +11,56 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       skip: ${{ steps.check.outputs.skip }}
+      current_date: ${{ steps.get-date.outputs.current_date }}
     steps:
       - name: 检出代码
         uses: actions/checkout@v3
+
+      - name: 获取当前日期
+        id: get-date
+        run: |
+          current_date=$(TZ='Asia/Shanghai' date '+%Y-%m-%d')
+          echo "current_date=$current_date" >> "$GITHUB_OUTPUT"
+          echo "当前北京时间: $current_date"
 
       - name: 恢复签到成功记录缓存
         id: cache-success-restore
         uses: actions/cache@v4
         with:
           path: .last_success_date
-          key: last-success-marker
-          restore-keys: last-success-marker
+          key: last-success-marker  # 固定键
+          restore-keys: |
+            last-success-marker     # 固定恢复键
 
       - name: 判断是否已签到
         id: check
         run: |
-          current_date=$(TZ='Asia/Shanghai' date '+%Y-%m-%d')
-          echo "当前北京时间: $current_date"
-
+          current_date="${{ steps.get-date.outputs.current_date }}"
+          echo "检查日期: $current_date"
+          
           if [ -f .last_success_date ]; then
             last_date=$(cat .last_success_date)
-            echo "上次签到日期: $last_date"
-            if [ "$last_date" = "$current_date" ]; then
-              echo "今天已成功签到，跳过执行。"
-              echo "skip=true" >> "$GITHUB_OUTPUT"
-              exit 0
+            echo "从缓存恢复的日期: $last_date"
+            
+            if [[ "$last_date" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+              if [ "$last_date" = "$current_date" ]; then
+                echo "今天已成功签到，跳过执行。"
+                echo "skip=true" >> "$GITHUB_OUTPUT"
+                exit 0
+              else
+                echo "缓存日期与今天不符，需要重新签到"
+                echo "缓存日期: $last_date"
+                echo "今天日期: $current_date"
+              fi
+            else
+              echo "❌ 缓存文件内容无效: '$last_date'，删除无效文件"
+              rm -f .last_success_date
             fi
+          else
+            echo "📝 未找到缓存文件，需要签到"
           fi
 
-          echo "今天尚未签到，继续执行。"
+          echo "🚀 今天尚未签到，继续执行。"
           echo "skip=false" >> "$GITHUB_OUTPUT"
 
   sign-in:
@@ -81,16 +102,17 @@ jobs:
       - name: 标记今天签到成功
         if: success()
         run: |
-          date_str=$(TZ='Asia/Shanghai' date '+%Y-%m-%d')
+          date_str="${{ needs.check-if-already-signed.outputs.current_date }}"
+          echo "写入签到日期: $date_str"
           echo "$date_str" > .last_success_date
-          echo "已记录成功签到日期: $date_str"
+          echo "验证写入内容: $(cat .last_success_date)"
 
-      - name: 保存成功记录到缓存
+      - name: 保存成功记录到缓存（覆盖旧缓存）
         if: success()
         uses: actions/cache@v4
         with:
           path: .last_success_date
-          key: last-success-marker
+          key: last-success-marker  # 相同的固定键，会覆盖旧缓存
 
   already-signed:
     needs: check-if-already-signed
@@ -108,19 +130,18 @@ jobs:
       - name: 安装依赖
         run: pip install requests
 
-      - name: 执行签到脚本
+      - name: 执行跳过通知脚本
         env:
           TG_CONFIG: ${{ secrets.TG_CONFIG }}
         run: python iskip.py
 
   final:
-    needs: [sign-in, already-signed]
+    needs: [check-if-already-signed, sign-in, already-signed]
     if: always()
     runs-on: ubuntu-latest
     steps:
       - name: 清理旧的工作流记录
         uses: Mattraks/delete-workflow-runs@main
-        if: always()
         with:
           token: ${{ github.token }}
           repository: ${{ github.repository }}
