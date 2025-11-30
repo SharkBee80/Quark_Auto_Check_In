@@ -28,9 +28,8 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .last_success_date
-          key: last-success-marker  # 固定键
-          restore-keys: |
-            last-success-marker     # 固定恢复键
+          key: last-success-date-${{ steps.get-date.outputs.current_date }}
+          restore-keys: last-success-date-
 
       - name: 判断是否已签到
         id: check
@@ -112,7 +111,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: .last_success_date
-          key: last-success-marker  # 相同的固定键，会覆盖旧缓存
+          key: last-success-date-${{ needs.check-if-already-signed.outputs.current_date }}
 
   already-signed:
     needs: check-if-already-signed
