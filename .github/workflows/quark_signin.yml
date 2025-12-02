@@ -29,7 +29,7 @@ jobs:
         with:
           path: .last_success_date
           key: last-success-date-${{ steps.get-date.outputs.current_date }}
-          restore-keys: last-success-date-
+          restore-keys: last-success-date-${{ steps.get-date.outputs.current_date }}
 
       - name: 判断是否已签到
         id: check
