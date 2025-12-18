@@ -1,0 +1,27 @@
+name: Quark签到(简单)
+
+on:
+  schedule:
+    - cron: '0 1 * * *'   # 北京时间 09:00 (UTC+8 -> UTC+1)
+  workflow_dispatch:      # 允许手动触发
+
+jobs:
+  sign-in:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v3
+
+      - name: 设置Python环境
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: 安装依赖
+        run: pip install requests
+
+      - name: 执行签到脚本
+        env:
+          COOKIE_QUARK: ${{ secrets.COOKIE_QUARK }}
+          TG_CONFIG: ${{ secrets.TG_CONFIG }}
+        run: python checkIn_Quark.py
