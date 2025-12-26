@@ -65,7 +65,7 @@ def tg_send(msg):
                f"#quark *夸克自动签到*\n"
                f"\n"
                f"{msg}\n"
-               f"\n"
+               # f"\n"
                f"📅 *时间*：{now_beijing}\n")
 
         tg_bot.send_markdown(msg)
@@ -132,12 +132,15 @@ class Quark:
             "sign": self.param.get('sign'),
             "vcode": self.param.get('vcode')
         }
-        response = requests.get(url=url, params=querystring).json()
-        # print(response)
+        try:
+            response = requests.get(url=url, params=querystring).json()
+        except Exception as e:
+            return False, {"err": str(e)}
+            # print(response)
         if response.get("data"):
-            return response["data"]
+            return True, response["data"]
         else:
-            return False
+            return False, response["message"]
 
     def get_growth_sign(self):
         """
@@ -160,21 +163,21 @@ class Quark:
         else:
             return False, response["message"]
 
-    def queryBalance(self):
-        """
-        查询抽奖余额
-        """
-        url = "https://coral2.quark.cn/currency/v1/queryBalance"
-        querystring = {
-            "moduleCode": "1f3563d38896438db994f118d4ff53cb",
-            "kps": self.param.get('kps'),
-        }
-        response = requests.get(url=url, params=querystring).json()
-        # print(response)
-        if response.get("data"):
-            return response["data"]["balance"]
-        else:
-            return response["msg"]
+    # def queryBalance(self):
+    #     """
+    #     查询抽奖余额
+    #     """
+    #     url = "https://coral2.quark.cn/currency/v1/queryBalance"
+    #     querystring = {
+    #         "moduleCode": "1f3563d38896438db994f118d4ff53cb",
+    #         "kps": self.param.get('kps'),
+    #     }
+    #     response = requests.get(url=url, params=querystring).json()
+    #     # print(response)
+    #     if response.get("data"):
+    #         return response["data"]["balance"]
+    #     else:
+    #         return response["msg"]
 
     def do_sign(self):
         """
@@ -183,8 +186,8 @@ class Quark:
         """
         log = ""
         # 每日领空间
-        growth_info = self.get_growth_info()
-        if growth_info:
+        info, growth_info = self.get_growth_info()
+        if info and growth_info:
             log += (
                 f" {'88VIP' if growth_info['88VIP'] else '普通用户'} {self.param.get('user')}\n"
                 f"💾 网盘总容量：{self.convert_bytes(growth_info['total_capacity'])}，"
@@ -208,6 +211,10 @@ class Quark:
                 else:
                     log += f"❌ 签到异常: {sign_return}\n"
         else:
+            if growth_info["err"]:
+                log += f"❌ 签到异常: 请查看运行日志或更新cookie\n"
+                print(growth_info["err"])
+                return None
             log += f"❌ 签到异常: 获取成长信息失败\n"
             print("❌ 签到异常: 获取成长信息失败")
             # raise Exception("❌ 签到异常: 获取成长信息失败")  # 适用于单账号情形，当 cookie 值失效后直接报错，方便通过 github action 的操作系统来进行提醒 如果你使用的是多账号签到的话，不要跟进此更新
